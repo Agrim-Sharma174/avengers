@@ -1,135 +1,94 @@
-# Throw Fire
+# Marvel Avengers Gesture-Based Game
 
-An interactive AR application that lets you create and throw fire with hand gestures!
+A fun, interactive game that lets you become your favorite Marvel hero using computer vision and gesture controls. This version features easier gameplay for beginners and spectacular hero-specific visual effects!
+
+![Avengers Logo](https://i.imgur.com/YbqKVo4.png)
+
+## Overview
+
+The Avengers Game uses your webcam and hand gestures to let you control Marvel superheroes and defeat enemies. With enhanced visual effects and simplified gameplay, it's accessible for players of all skill levels.
 
 ## Features
 
-- Create small fires by pinching your thumb and index finger together
-- Collect all fires by making a fist
-- Throw collected fires by opening your palm toward the camera
-
-## Project Versions
-
-This project has two versions:
-
-1. **Full Version (`throw_fire.py`)**: Uses MediaPipe for hand gesture recognition.
-2. **Simple Version (`simple_fire.py`)**: Uses only OpenCV and mouse controls instead of hand gestures.
+- **5 Playable Heroes**: Iron Man, Spider-Man, Thor, Hulk, and Captain America
+- **Hero-Specific Powers**: Each hero has unique attack animations and visual effects
+- **Gesture Controls**: Use intuitive hand gestures to target enemies and unleash superhero powers
+- **Dynamic Difficulty**: Enemies spawn in waves with slight increases in difficulty
+- **Spectacular Kill Effects**: Satisfy your inner hero with amazing visual effects when defeating enemies
+- **Easy Mode**: Reduced enemy numbers and speed for a more accessible experience
 
 ## Requirements
 
 - Python 3.7+
 - Webcam
-- For full version: The packages listed in `requirements.txt`
-- For simple version: Only OpenCV and NumPy
+- Libraries:
+  - OpenCV
+  - Mediapipe
+  - NumPy
 
 ## Installation
 
-### Windows
-
-1. Clone or download this repository
-2. Open PowerShell or Command Prompt
-3. Navigate to the project directory
-4. Create a virtual environment (optional but recommended):
-   ```
-   python -m venv venv
-   .\venv\Scripts\activate
-   ```
-5. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
-
-### Manual Installation
-
-If you encounter issues with the requirements file, you can install the packages individually:
+1. Clone this repository:
 
 ```
-pip install opencv-python
-pip install mediapipe
-pip install numpy
+git clone https://github.com/yourusername/avengers-game.git
+cd avengers-game
 ```
 
-For the simple version, you only need:
-```
-pip install opencv-python
-pip install numpy
-```
-
-### Other OS
-
-1. Clone this repository
-2. Create a virtual environment (optional but recommended):
-   ```
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   ```
-3. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-### Full Version (Hand Gestures)
-
-Run the full application:
+2. Install required packages:
 
 ```
-python throw_fire.py
+pip install opencv-python mediapipe numpy
 ```
 
-#### Gestures
-
-1. **Create Fire**: Pinch your thumb and index finger together
-2. **Collect Fires**: Make a fist after creating fires
-3. **Throw Fire**: After collecting fires, open your palm facing the camera
-
-### Simple Version (Mouse Controls)
-
-If you're having trouble with MediaPipe installation or hand gesture recognition, try the simplified version:
+3. Run the game:
 
 ```
-python simple_fire.py
+python run_avengers.py
 ```
 
-#### Mouse Controls
+## Gameplay Controls
 
-1. **Create Fire**: Left click anywhere on the screen
-2. **Collect Fires**: Right click to collect all fires
-3. **Throw Fire**: Middle click to throw collected fires
+| Gesture | Action |
+|---------|--------|
+| Point with index finger | Target enemies |
+| Make a fist | Collect power (up to 5 charges) |
+| Open palm | Use power to attack targeted enemy |
+| Rock-on gesture (index + pinky up) | Open hero selection menu |
+| Press 'q' | Quit game |
+| Press 'm' | Return to menu |
 
-### General Controls
+## Hero Powers
 
-Press 'q' to quit either application.
+Each hero has a unique power with different visual effects:
 
-## How It Works
+- **Iron Man**: Repulsor Beam - A straight energy beam with explosive impact
+- **Spider-Man**: Web Shooter - Sticky webs that expand on impact
+- **Thor**: Lightning - Jagged lightning bolts with multiple branches
+- **Hulk**: Smash - Powerful area-of-effect attack with debris
+- **Captain America**: Shield Throw - Bouncing shield with ricocheting effects
 
-This application uses:
-- OpenCV for webcam access and image processing
-- MediaPipe for hand tracking and gesture recognition (full version only)
-- NumPy for numerical operations
+## Game Objective
 
-The program tracks user input (hand gestures or mouse clicks), and creates visual fire effects accordingly.
+Protect yourself from incoming enemies by defeating them before they reach you. Each wave will spawn a small number of enemies that move toward your position. Target them with your index finger and unleash your hero's power to defeat them!
 
 ## Customization
 
-See [CUSTOMIZATION.md](CUSTOMIZATION.md) for details on how to:
-- Change fire colors and appearance
-- Adjust animation parameters
-- Modify gesture recognition sensitivity
-- Add sound effects and other enhancements
+The game can be further customized by editing these files:
+- `avengers_game.py`: Main game logic
+- `hero_effects.py`: Visual effects for each hero
+- `run_avengers.py`: Game launcher and intro display
 
-## Troubleshooting
+## Credits
 
-### Installation Issues
-- If pip fails to install packages, try installing them one by one as shown in the Manual Installation section
-- Make sure you have an internet connection when installing packages
-- If OpenCV installation fails, try: `pip install opencv-contrib-python` instead
-- For MediaPipe installation issues, check their [official documentation](https://google.github.io/mediapipe/getting_started/install.html)
-- If you're still having issues, try the simple version which only requires OpenCV
+- Developed using OpenCV and MediaPipe
+- Inspired by Marvel's Avengers characters
+- Created for educational and entertainment purposes
 
-### Runtime Issues
-- If the camera doesn't start, make sure no other application is using it
-- For best hand tracking, ensure good lighting conditions
-- If gestures aren't detected accurately, try adjusting your hand position or distance from the camera
-- On Windows, if you get errors about missing DLLs, you may need to install the Microsoft Visual C++ Redistributable package 
+## License
+
+This project is for educational purposes only. All Marvel characters are property of Marvel Entertainment and Disney.
+
+---
+
+Enjoy the game! If you have suggestions or issues, please submit them on GitHub! 
