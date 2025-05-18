@@ -26,8 +26,8 @@ class HeroEffect:
                 "name": "Iron Man",
                 "color": (0, 0, 255),  # Red
                 "effect_name": "Repulsor Beam",
-                "mask_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
-                "effect_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
+                "mask_path": "assets/heroes/iron_man/mask.png",
+                "effect_path": "assets/heroes/iron_man/effect.png",
                 "effect_image": None,
                 "mask_image": None,
                 "power_type": "beam",  # Continuous beam
@@ -39,8 +39,8 @@ class HeroEffect:
                 "name": "Spider-Man", 
                 "color": (0, 0, 255),  # Red
                 "effect_name": "Web Shooter",
-                "mask_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
-                "effect_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
+                "mask_path": "assets/heroes/spider_man/mask.png",
+                "effect_path": "assets/heroes/spider_man/effect.png",
                 "effect_image": None,
                 "mask_image": None,
                 "power_type": "web",  # Web that sticks to targets
@@ -52,8 +52,8 @@ class HeroEffect:
                 "name": "Thor",
                 "color": (0, 215, 255),  # Yellow
                 "effect_name": "Lightning",
-                "mask_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
-                "effect_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
+                "mask_path": "assets/heroes/thor/mask.png",
+                "effect_path": "assets/heroes/thor/effect.png",
                 "effect_image": None,
                 "mask_image": None,
                 "power_type": "lightning",  # Lightning that chains between targets
@@ -65,8 +65,8 @@ class HeroEffect:
                 "name": "Hulk",
                 "color": (0, 255, 0),  # Green
                 "effect_name": "Smash",
-                "mask_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
-                "effect_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
+                "mask_path": "assets/heroes/hulk/mask.png",
+                "effect_path": "assets/heroes/hulk/effect.png",
                 "effect_image": None,
                 "mask_image": None,
                 "power_type": "smash",  # Area of effect damage
@@ -78,8 +78,8 @@ class HeroEffect:
                 "name": "Captain America",
                 "color": (255, 0, 0),  # Blue
                 "effect_name": "Shield Throw",
-                "mask_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
-                "effect_url": "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml",
+                "mask_path": "assets/heroes/captain_america/mask.png",
+                "effect_path": "assets/heroes/captain_america/effect.png",
                 "effect_image": None,
                 "mask_image": None,
                 "power_type": "shield",  # Shield that bounces between targets
@@ -146,23 +146,45 @@ class HeroEffect:
 
     def load_hero_assets(self):
         """Load hero images and masks."""
-        # For now, generate placeholder images for each hero
-        # In a real implementation, you'd download actual assets
         for hero_id, hero_data in self.hero_assets.items():
-            hero_dir = self.heroes_dir / hero_id
-            hero_dir.mkdir(exist_ok=True)
+            # Load mask image
+            mask_path = hero_data["mask_path"]
+            if os.path.exists(mask_path):
+                mask_img = cv2.imread(mask_path, cv2.IMREAD_UNCHANGED)
+                if mask_img is not None:
+                    # If image is jpg (no alpha), add alpha channel
+                    if len(mask_img.shape) == 3 and mask_img.shape[2] == 3:
+                        alpha = np.ones((mask_img.shape[0], mask_img.shape[1], 1), dtype=mask_img.dtype) * 255
+                        mask_img = cv2.cvtColor(mask_img, cv2.COLOR_BGR2BGRA)
+                    hero_data["mask_image"] = mask_img
+                else:
+                    print(f"Warning: Could not load mask image for {hero_id}")
+            else:
+                print(f"Warning: Mask image not found for {hero_id} at {mask_path}")
             
-            # Create placeholder effect image if not downloaded
-            effect_path = hero_dir / "effect.png"
-            if not effect_path.exists():
-                self.generate_hero_effect_image(hero_id, str(effect_path))
-            hero_data["effect_image"] = cv2.imread(str(effect_path), cv2.IMREAD_UNCHANGED)
+            # Load effect image
+            effect_path = hero_data["effect_path"]
+            if os.path.exists(effect_path):
+                effect_img = cv2.imread(effect_path, cv2.IMREAD_UNCHANGED)
+                if effect_img is not None:
+                    # If image is jpg (no alpha), add alpha channel
+                    if len(effect_img.shape) == 3 and effect_img.shape[2] == 3:
+                        alpha = np.ones((effect_img.shape[0], effect_img.shape[1], 1), dtype=effect_img.dtype) * 255
+                        effect_img = cv2.cvtColor(effect_img, cv2.COLOR_BGR2BGRA)
+                    hero_data["effect_image"] = effect_img
+                else:
+                    print(f"Warning: Could not load effect image for {hero_id}")
+            else:
+                print(f"Warning: Effect image not found for {hero_id} at {effect_path}")
+                
+            # If either image failed to load, generate a placeholder
+            if hero_data["mask_image"] is None:
+                self.generate_hero_mask_image(hero_id, mask_path)
+                hero_data["mask_image"] = cv2.imread(mask_path, cv2.IMREAD_UNCHANGED)
             
-            # Create placeholder mask image if not downloaded
-            mask_path = hero_dir / "mask.png"
-            if not mask_path.exists():
-                self.generate_hero_mask_image(hero_id, str(mask_path))
-            hero_data["mask_image"] = cv2.imread(str(mask_path), cv2.IMREAD_UNCHANGED)
+            if hero_data["effect_image"] is None:
+                self.generate_hero_effect_image(hero_id, effect_path)
+                hero_data["effect_image"] = cv2.imread(effect_path, cv2.IMREAD_UNCHANGED)
 
     def generate_hero_mask_image(self, hero_id, save_path):
         """Generate a placeholder mask image for a hero."""
@@ -377,8 +399,10 @@ class HeroEffect:
             hero_id = "captain_america"
         
         hero_data = self.hero_assets.get(hero_id, self.hero_assets["iron_man"])
-        power_type = hero_data["power_type"]
-        power_color = hero_data["power_color"]
+        effect_image = hero_data["effect_image"]
+        
+        if effect_image is None:
+            return None
         
         # Create a temporary frame for drawing the effect
         effect_frame = np.zeros((self.height, self.width, 3), dtype=np.uint8)
@@ -387,308 +411,65 @@ class HeroEffect:
         start_x, start_y = int(start_pos[0]), int(start_pos[1])
         target_x, target_y = int(target_pos[0]), int(target_pos[1])
         
-        # Add jitter for more dynamic effects
-        jitter_x = int(random.uniform(-5, 5) * intensity)
-        jitter_y = int(random.uniform(-5, 5) * intensity)
+        # Calculate the position along the path based on progress
+        current_x = int(start_x + (target_x - start_x) * progress)
+        current_y = int(start_y + (target_y - start_y) * progress)
         
-        if power_type == "beam":  # Iron Man - bright repulsor beam
-            # Draw a line from start to target
-            cv2.line(effect_frame, (start_x, start_y), (target_x, target_y), power_color, 
-                    thickness=int(12 * intensity), lineType=cv2.LINE_AA)
-            
-            # Add a glow effect
-            cv2.line(effect_frame, (start_x, start_y), (target_x, target_y), 
-                    (255, 255, 255), thickness=int(6 * intensity), lineType=cv2.LINE_AA)
-            
-            # Add impact point at target
-            cv2.circle(effect_frame, (target_x + jitter_x, target_y + jitter_y), 
-                     int(20 * intensity), power_color, -1)
-            cv2.circle(effect_frame, (target_x, target_y), 
-                     int(10 * intensity), (255, 255, 255), -1)
-            
-            # Add expanding rings at impact
-            for i in range(3):
-                radius = int((15 + i * 10) * intensity * (0.5 + 0.5 * progress))
-                cv2.circle(effect_frame, (target_x, target_y), radius, 
-                         power_color, 1, cv2.LINE_AA)
-            
-        elif power_type == "web":  # Spider-Man - web line with sticky effect
-            # Calculate positions along the path
-            current_x = int(start_x + (target_x - start_x) * progress)
-            current_y = int(start_y + (target_y - start_y) * progress)
-            
-            # Draw the main web line
-            cv2.line(effect_frame, (start_x, start_y), (current_x, current_y), 
-                    power_color, thickness=int(4 * intensity), lineType=cv2.LINE_AA)
-            
-            # Add small web branches along the line
-            line_length = math.sqrt((target_x - start_x)**2 + (target_y - start_y)**2)
-            num_branches = int(line_length / 15)
-            
-            for i in range(num_branches):
-                t = i / num_branches
-                branch_x = int(start_x + (target_x - start_x) * t)
-                branch_y = int(start_y + (target_y - start_y) * t)
-                
-                # Only draw branches that are within the current progress
-                if t <= progress:
-                    angle = math.atan2(target_y - start_y, target_x - start_x) + math.pi/2
-                    length = random.randint(5, 15) * intensity
-                    
-                    # Draw two branches perpendicular to the web line
-                    end1_x = int(branch_x + length * math.cos(angle))
-                    end1_y = int(branch_y + length * math.sin(angle))
-                    end2_x = int(branch_x - length * math.cos(angle))
-                    end2_y = int(branch_y - length * math.sin(angle))
-                    
-                    cv2.line(effect_frame, (branch_x, branch_y), (end1_x, end1_y), 
-                            power_color, thickness=1, lineType=cv2.LINE_AA)
-                    cv2.line(effect_frame, (branch_x, branch_y), (end2_x, end2_y), 
-                            power_color, thickness=1, lineType=cv2.LINE_AA)
-            
-            # Add an impact effect at the end - enhanced web pattern
-            if progress > 0.7:
-                # Draw a web pattern at the target
-                web_size = int(25 * intensity)
-                # Outer circle
-                cv2.circle(effect_frame, (target_x, target_y), web_size, 
-                         power_color, thickness=1, lineType=cv2.LINE_AA)
-                
-                # Web strands
-                for i in range(8):
-                    angle = i * math.pi / 4
-                    end_x = int(target_x + web_size * math.cos(angle))
-                    end_y = int(target_y + web_size * math.sin(angle))
-                    cv2.line(effect_frame, (target_x, target_y), (end_x, end_y), 
-                            power_color, thickness=1, lineType=cv2.LINE_AA)
-                    
-                    # Add connecting strands
-                    for j in range(2):
-                        distance = web_size * (j+1) / 3
-                        mid_x = int(target_x + distance * math.cos(angle))
-                        mid_y = int(target_y + distance * math.sin(angle))
-                        
-                        next_angle = (i + 1) % 8 * math.pi / 4
-                        next_x = int(target_x + distance * math.cos(next_angle))
-                        next_y = int(target_y + distance * math.sin(next_angle))
-                        
-                        cv2.line(effect_frame, (mid_x, mid_y), (next_x, next_y), 
-                               power_color, thickness=1, lineType=cv2.LINE_AA)
+        # Calculate angle for rotation
+        angle = math.atan2(target_y - start_y, target_x - start_x) * 180 / math.pi
         
-        elif power_type == "lightning":  # Thor - Enhanced lightning with more branches
-            # Generate lightning path
-            points = [(start_x, start_y)]
-            
-            # Calculate direct distance and angle
-            total_dist = math.sqrt((target_x - start_x)**2 + (target_y - start_y)**2)
-            angle = math.atan2(target_y - start_y, target_x - start_x)
-            
-            num_segments = max(6, int(total_dist / 25))
-            
-            for i in range(1, num_segments):
-                # Calculate ideal position along the direct path
-                ideal_x = start_x + (target_x - start_x) * (i / num_segments)
-                ideal_y = start_y + (target_y - start_y) * (i / num_segments)
-                
-                # Add some randomness perpendicular to the path
-                perp_angle = angle + math.pi/2
-                offset = random.randint(-20, 20)
-                
-                point_x = int(ideal_x + offset * math.cos(perp_angle))
-                point_y = int(ideal_y + offset * math.sin(perp_angle))
-                
-                points.append((point_x, point_y))
-            
-            # Final point is the target
-            points.append((target_x, target_y))
-            
-            # Draw lightning segments based on progress
-            num_visible = max(2, int(len(points) * progress))
-            
-            # Draw all segments up to the current progress
-            for i in range(num_visible - 1):
-                # Main lightning line - wider for more visibility
-                cv2.line(effect_frame, points[i], points[i+1], power_color, 
-                       thickness=int(5 * intensity), lineType=cv2.LINE_AA)
-                
-                # Add glow effect
-                cv2.line(effect_frame, points[i], points[i+1], (255, 255, 255), 
-                       thickness=int(3 * intensity), lineType=cv2.LINE_AA)
-                
-                # Add more branching lightning
-                if random.random() < 0.4 and i > 0:  # Increased probability
-                    branch_len = random.randint(15, 30)
-                    branch_angle = angle + random.uniform(-math.pi/3, math.pi/3)
-                    branch_x = int(points[i][0] + branch_len * math.cos(branch_angle))
-                    branch_y = int(points[i][1] + branch_len * math.sin(branch_angle))
-                    
-                    cv2.line(effect_frame, points[i], (branch_x, branch_y), power_color, 
-                           thickness=int(3 * intensity), lineType=cv2.LINE_AA)
-                    
-                    # Add sub-branches
-                    if random.random() < 0.5:
-                        sub_branch_len = random.randint(5, 15)
-                        sub_branch_angle = branch_angle + random.uniform(-math.pi/4, math.pi/4)
-                        sub_branch_x = int(branch_x + sub_branch_len * math.cos(sub_branch_angle))
-                        sub_branch_y = int(branch_y + sub_branch_len * math.sin(sub_branch_angle))
-                        
-                        cv2.line(effect_frame, (branch_x, branch_y), 
-                               (sub_branch_x, sub_branch_y), power_color, 
-                               thickness=int(2 * intensity), lineType=cv2.LINE_AA)
-            
-            # Add impact at target if progress is near complete
-            if progress > 0.8:
-                # Expanding circles
-                for i in range(3):
-                    radius = int((10 + i * 10) * intensity * progress)
-                    cv2.circle(effect_frame, (target_x, target_y), radius, 
-                             power_color, thickness=1, lineType=cv2.LINE_AA)
-                
-                # Bright center
-                cv2.circle(effect_frame, (target_x, target_y), int(15 * intensity), 
-                         (255, 255, 255), -1)
-                cv2.circle(effect_frame, (target_x, target_y), int(10 * intensity), 
-                         power_color, -1)
+        # Scale effect based on intensity
+        scale = intensity * (1.0 + 0.2 * math.sin(frame_count * 0.1))  # Add pulsing effect
         
-        elif power_type == "smash":  # Hulk - Enhanced area effect smash
-            # Calculate progress along path
-            current_x = int(start_x + (target_x - start_x) * progress)
-            current_y = int(start_y + (target_y - start_y) * progress)
-            
-            # Draw traveling fist effect
-            if progress < 0.7:
-                # Fist becoming larger as it approaches target
-                size = int(25 + 25 * progress)
-                cv2.rectangle(effect_frame, 
-                           (current_x - size//2, current_y - size//2),
-                           (current_x + size//2, current_y + size//2),
-                           power_color, -1)
-                
-                # Add motion blur
-                prev_x = int(start_x + (target_x - start_x) * max(0, progress - 0.1))
-                prev_y = int(start_y + (target_y - start_y) * max(0, progress - 0.1))
-                prev_size = int(25 + 25 * max(0, progress - 0.1))
-                
-                cv2.rectangle(effect_frame, 
-                           (prev_x - prev_size//2, prev_y - prev_size//2),
-                           (prev_x + prev_size//2, prev_y + prev_size//2),
-                           power_color, 1)
-            else:
-                # Impact effect at target
-                impact_size = int(60 * intensity)
-                
-                # Green shockwave
-                for r in range(4):
-                    radius = int(impact_size * (0.5 + r * 0.3) * (progress - 0.7) / 0.3)
-                    thickness = int(6 * (1.0 - r * 0.2))
-                    cv2.circle(effect_frame, (target_x, target_y), radius, 
-                             power_color, thickness=thickness, lineType=cv2.LINE_AA)
-                
-                # Impact cracks - more and thicker
-                for i in range(10):
-                    angle = i * math.pi / 5 + frame_count * 0.01
-                    length = impact_size * 1.5 * (progress - 0.7) / 0.3
-                    end_x = int(target_x + length * math.cos(angle))
-                    end_y = int(target_y + length * math.sin(angle))
-                    
-                    thickness = int(4 * intensity * (1.0 - (progress - 0.7) * 0.5))
-                    cv2.line(effect_frame, (target_x, target_y), (end_x, end_y), 
-                           power_color, thickness=thickness, lineType=cv2.LINE_AA)
-                
-                # Debris particles
-                for _ in range(15):
-                    angle = random.uniform(0, 2 * math.pi)
-                    distance = random.uniform(radius/2, radius)
-                    particle_x = int(target_x + distance * math.cos(angle))
-                    particle_y = int(target_y + distance * math.sin(angle))
-                    particle_size = random.randint(2, 5)
-                    
-                    cv2.circle(effect_frame, (particle_x, particle_y), particle_size, 
-                             power_color, -1)
+        # Resize and rotate effect image
+        effect_size = max(50, int(min(self.width, self.height) * 0.1 * scale))
+        resized_effect = cv2.resize(effect_image, (effect_size, effect_size))
         
-        elif power_type == "shield":  # Captain America - Enhanced shield with star
-            # Calculate current position along curved path
-            t = progress
-            # Add a slight curve to the path
-            x_offset = (target_x - start_x) * 0.3 * math.sin(math.pi * t)
-            y_offset = 0
+        # Create rotation matrix
+        M = cv2.getRotationMatrix2D((effect_size//2, effect_size//2), angle, 1.0)
+        rotated_effect = cv2.warpAffine(resized_effect, M, (effect_size, effect_size))
+        
+        # Calculate position to place effect
+        effect_x = current_x - effect_size//2
+        effect_y = current_y - effect_size//2
+        
+        # Create mask for the effect
+        if rotated_effect.shape[2] == 4:  # If image has alpha channel
+            alpha = rotated_effect[:, :, 3] / 255.0
+            alpha = np.repeat(alpha[:, :, np.newaxis], 3, axis=2)
+            effect_rgb = rotated_effect[:, :, :3]
+        else:
+            alpha = np.ones((rotated_effect.shape[0], rotated_effect.shape[1], 3))
+            effect_rgb = rotated_effect
+        
+        # Calculate valid region for overlay
+        x1 = max(0, effect_x)
+        y1 = max(0, effect_y)
+        x2 = min(self.width, effect_x + effect_size)
+        y2 = min(self.height, effect_y + effect_size)
+        
+        # Calculate effect image region
+        ex1 = max(0, -effect_x)
+        ey1 = max(0, -effect_y)
+        ex2 = min(effect_size, self.width - effect_x)
+        ey2 = min(effect_size, self.height - effect_y)
+        
+        # Only proceed if we have valid regions
+        if x2 > x1 and y2 > y1 and ex2 > ex1 and ey2 > ey1:
+            effect_region = effect_rgb[ey1:ey2, ex1:ex2]
+            alpha_region = alpha[ey1:ey2, ex1:ex2]
             
-            current_x = int(start_x + (target_x - start_x) * t + x_offset)
-            current_y = int(start_y + (target_y - start_y) * t + y_offset)
-            
-            # Shield size
-            shield_size = int(30 * intensity)
-            
-            # Create shield
-            # Outer circle (blue)
-            cv2.circle(effect_frame, (current_x, current_y), shield_size, (255, 0, 0), -1)
-            # Inner circles
-            cv2.circle(effect_frame, (current_x, current_y), int(shield_size * 0.8), (0, 0, 255), -1)
-            cv2.circle(effect_frame, (current_x, current_y), int(shield_size * 0.6), (255, 255, 255), -1)
-            cv2.circle(effect_frame, (current_x, current_y), int(shield_size * 0.4), (0, 0, 255), -1)
-            cv2.circle(effect_frame, (current_x, current_y), int(shield_size * 0.2), (255, 255, 255), -1)
-            
-            # Add star in center
-            star_size = int(shield_size * 0.2)
-            star_points = 5
-            star_outer_radius = star_size
-            star_inner_radius = int(star_size * 0.5)
-            
-            # Calculate star points
-            star_vertices = []
-            for i in range(star_points * 2):
-                angle = math.pi / 2 + i * math.pi / star_points
-                radius = star_outer_radius if i % 2 == 0 else star_inner_radius
-                x = int(current_x + radius * math.cos(angle))
-                y = int(current_y + radius * math.sin(angle))
-                star_vertices.append((x, y))
-            
-            # Draw star
-            if len(star_vertices) > 2:
-                pts = np.array(star_vertices, np.int32)
-                pts = pts.reshape((-1, 1, 2))
-                cv2.fillPoly(effect_frame, [pts], (255, 255, 255))
-            
-            # Add motion blur based on rotation
-            rotation = progress * 720  # Multiple rotations
-            
-            # Add trail effect
-            alpha = 0.7  # Increased trail opacity
-            trail_points = 4  # More trail points
-            for i in range(1, trail_points + 1):
-                trail_t = max(0, t - 0.05 * i)
-                trail_x_offset = (target_x - start_x) * 0.3 * math.sin(math.pi * trail_t)
-                trail_x = int(start_x + (target_x - start_x) * trail_t + trail_x_offset)
-                trail_y = int(start_y + (target_y - start_y) * trail_t)
-                
-                trail_alpha = alpha * (1 - i / (trail_points + 1))
-                trail_size = int(shield_size * (1 - i * 0.1))
-                
-                # Semi-transparent trail
-                cv2.circle(effect_frame, (trail_x, trail_y), trail_size, 
-                        (int(255 * trail_alpha), 0, 0), -1, lineType=cv2.LINE_AA)
-            
-            # Add impact effect at target if nearly complete
-            if progress > 0.9:
-                # Expanding circles
-                for i in range(3):
-                    radius = int((shield_size + 10 + i * 10) * (progress - 0.9) / 0.1)
-                    cv2.circle(effect_frame, (target_x, target_y), radius, 
-                             (255, 255, 255), thickness=2, lineType=cv2.LINE_AA)
-                
-                # Ricocheting mini-shields
-                if random.random() < 0.3:  # Only occasionally show mini-shields
-                    for i in range(3):
-                        angle = random.uniform(0, 2 * math.pi)
-                        distance = radius * 0.8
-                        mini_x = int(target_x + distance * math.cos(angle))
-                        mini_y = int(target_y + distance * math.sin(angle))
-                        mini_size = int(shield_size * 0.3)
-                        
-                        # Mini shield
-                        cv2.circle(effect_frame, (mini_x, mini_y), mini_size, (255, 0, 0), -1)
-                        cv2.circle(effect_frame, (mini_x, mini_y), int(mini_size * 0.6), 
-                                 (255, 255, 255), -1)
+            # Create region in effect frame
+            effect_frame[y1:y2, x1:x2] = (effect_region * alpha_region).astype(np.uint8)
+        
+        # Add trail effect based on hero type
+        if hero_data["power_type"] in ["beam", "lightning"]:
+            cv2.line(effect_frame, (start_x, start_y), (current_x, current_y),
+                    hero_data["power_color"], 2, cv2.LINE_AA)
+        elif hero_data["power_type"] == "web":
+            # Draw web strand
+            cv2.line(effect_frame, (start_x, start_y), (current_x, current_y),
+                    (255, 255, 255), 1, cv2.LINE_AA)
         
         return effect_frame
     

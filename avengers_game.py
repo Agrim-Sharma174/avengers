@@ -667,10 +667,13 @@ class AvengersGame:
         section_width = 1.0 / len(heroes)
         selected_index = min(int(wrist_x / section_width), len(heroes)-1)
         
-        self.current_hero = heroes[selected_index]
+        # Get the selected hero_id and convert to proper format
+        hero_id = heroes[selected_index]
+        self.current_hero = self.hero_effect.hero_assets[hero_id]["name"]
         
         # Confirm selection with fist gesture
         if self.is_fist_gesture(hand_landmarks):
+            print(f"Selected hero: {self.current_hero}")  # Debug print
             self.exit_menu()
     
     def exit_menu(self):
@@ -691,20 +694,73 @@ class AvengersGame:
         heroes = list(self.hero_effect.hero_assets.keys())
         section_width = self.width / len(heroes)
         
-        for i, hero in enumerate(heroes):
+        for i, hero_id in enumerate(heroes):
+            hero_data = self.hero_effect.hero_assets[hero_id]
             x = int(i * section_width + section_width/2)
             y = self.height // 2
             
-            # Highlight selected hero
-            color = (0, 255, 0) if hero == self.current_hero else (200, 200, 200)
-            size = 30 if hero == self.current_hero else 20
+            # Get hero mask image for icon
+            mask_img = hero_data.get("mask_image")
+            if mask_img is not None:
+                # Calculate icon size and position
+                icon_size = 100
+                icon_x = x - icon_size//2
+                icon_y = y - icon_size//2
+                
+                # Resize mask image to icon size
+                icon = cv2.resize(mask_img, (icon_size, icon_size))
+                
+                # Highlight selected hero
+                current_hero_id = self.current_hero.lower().replace(" ", "_").replace("-", "_")
+                if hero_id == current_hero_id:
+                    # Draw highlight border
+                    cv2.rectangle(frame, (icon_x-5, icon_y-5), 
+                                (icon_x+icon_size+5, icon_y+icon_size+5), 
+                                (0, 255, 0), 2)
+                    blend_alpha = 1.0  # Full opacity for selected hero
+                else:
+                    blend_alpha = 0.7  # Slightly transparent for unselected heroes
+                
+                # Ensure icon_x and icon_y are within frame bounds
+                if (icon_x >= 0 and icon_y >= 0 and 
+                    icon_x + icon_size <= frame.shape[1] and 
+                    icon_y + icon_size <= frame.shape[0]):
+                    
+                    # Create ROI
+                    roi = frame[icon_y:icon_y+icon_size, icon_x:icon_x+icon_size]
+                    
+                    # Handle alpha channel if present
+                    if icon.shape[2] == 4:
+                        # Extract alpha channel and normalize to 0-1
+                        alpha_channel = icon[:, :, 3:] / 255.0
+                        # Get RGB channels
+                        icon_rgb = icon[:, :, :3]
+                        
+                        # Blend based on alpha channel
+                        blended = (1.0 - alpha_channel * blend_alpha) * roi + (alpha_channel * blend_alpha) * icon_rgb
+                        frame[icon_y:icon_y+icon_size, icon_x:icon_x+icon_size] = blended.astype(np.uint8)
+                    else:
+                        # If no alpha channel, use simple alpha blending
+                        blended = cv2.addWeighted(roi, 1 - blend_alpha, icon, blend_alpha, 0)
+                        frame[icon_y:icon_y+icon_size, icon_x:icon_x+icon_size] = blended
             
-            cv2.putText(frame, hero, (x - len(hero)*5, y), 
+            # Draw hero name
+            name = hero_data["name"]
+            text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+            text_x = x - text_size[0]//2
+            text_y = y + 70
+            
+            # Highlight selected hero name
+            color = (0, 255, 0) if hero_id == self.current_hero.lower().replace(" ", "_") else (200, 200, 200)
+            cv2.putText(frame, name, (text_x, text_y), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             
-            # Draw hero power example
-            hero_power = self.hero_effect.get_hero_power(hero)
-            cv2.circle(frame, (x, y + 50), size, hero_power["power_color"], -1)
+            # Draw power type
+            power_text = f"Power: {hero_data['effect_name']}"
+            text_size = cv2.getTextSize(power_text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)[0]
+            text_x = x - text_size[0]//2
+            cv2.putText(frame, power_text, (text_x, text_y + 30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1)
         
         # Instructions
         cv2.putText(frame, "Move hand left/right to select", (self.width//2 - 200, self.height - 120), 
@@ -740,32 +796,59 @@ class AvengersGame:
             exit()
     
     def render_ui(self, frame):
-        # Display score
-        cv2.putText(frame, f"Score: {self.score}", (20, 40), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        # Function to draw text with background
+        def draw_text_with_background(img, text, pos, font, font_scale, text_color, bg_color):
+            # Get text size
+            (text_w, text_h), baseline = cv2.getTextSize(text, font, font_scale, thickness=2)
+            # Draw background rectangle
+            cv2.rectangle(img, 
+                        (pos[0], pos[1] - text_h - baseline), 
+                        (pos[0] + text_w, pos[1] + baseline), 
+                        bg_color, -1)
+            # Draw text
+            cv2.putText(img, text, pos, font, font_scale, text_color, 2)
+
+        # Display score with background
+        draw_text_with_background(frame, f"Score: {self.score}", 
+                                (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, 
+                                (255, 255, 255), (0, 0, 0))
         
-        # Display current hero
-        cv2.putText(frame, f"Hero: {self.current_hero}", (20, 80), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        # Display current hero with background
+        draw_text_with_background(frame, f"Hero: {self.current_hero}", 
+                                (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, 
+                                (255, 255, 255), (0, 0, 0))
         
-        # Display wave number
-        cv2.putText(frame, f"Wave: {self.wave_number}", (20, 120), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        # Display wave number with background
+        draw_text_with_background(frame, f"Wave: {self.wave_number}", 
+                                (20, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, 
+                                (255, 255, 255), (0, 0, 0))
         
-        # Display health bar
+        # Display health bar with improved visibility
         health_width = int((self.player_health / 100) * 200)
+        # Draw background for health bar
+        cv2.rectangle(frame, (self.width - 220, 20), (self.width - 20, 60), (0, 0, 0), -1)
+        # Draw health bar background
         cv2.rectangle(frame, (self.width - 220, 30), (self.width - 20, 50), (50, 50, 50), -1)
+        # Draw actual health bar
         cv2.rectangle(frame, (self.width - 220, 30), (self.width - 220 + health_width, 50), (0, 0, 255), -1)
-        cv2.putText(frame, f"Health: {int(self.player_health)}%", (self.width - 210, 45), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        # Draw health text with better contrast
+        draw_text_with_background(frame, f"Health: {int(self.player_health)}%", 
+                                (self.width - 210, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 
+                                (255, 255, 255), (0, 0, 0))
         
-        # Display collected powers
+        # Display collected powers with background
         for i in range(self.max_powers):
+            center_x = self.width - 50 - i*30
+            center_y = 80
             if i < self.collected_powers:
                 color = self.hero_effect.get_hero_power(self.current_hero)["power_color"]
-                cv2.circle(frame, (self.width - 50 - i*30, 80), 10, color, -1)
+                # Draw power circle with background
+                cv2.circle(frame, (center_x, center_y), 12, (0, 0, 0), -1)  # Background
+                cv2.circle(frame, (center_x, center_y), 10, color, -1)  # Power
             else:
-                cv2.circle(frame, (self.width - 50 - i*30, 80), 10, (100, 100, 100), 2)
+                # Draw empty power slot with background
+                cv2.circle(frame, (center_x, center_y), 12, (0, 0, 0), -1)  # Background
+                cv2.circle(frame, (center_x, center_y), 10, (100, 100, 100), 2)  # Empty slot
         
         return frame
     
@@ -1143,18 +1226,15 @@ class AvengersGame:
     
     def render_danger_zone(self, frame, faces):
         if len(faces) > 0 and self.face_position:
-            # Draw smaller circle around face (player area)
-            cv2.circle(frame, self.face_position, self.player_circle_size, (0, 255, 0), 2)
-            
             # Draw danger zone around face
             cv2.circle(frame, self.face_position, self.danger_zone_radius, (0, 0, 255), 1, cv2.LINE_AA)
             
             # Apply hero mask to face
             for (x, y, w, h) in faces:
                 # Convert hero name to hero_id format
-                hero_id = self.current_hero.lower().replace(" ", "_")
-                # Apply mask
-                frame = self.hero_effect.apply_hero_mask(frame, hero_id, x, y, w, h)
+                hero_id = self.current_hero.lower().replace(" ", "_").replace("-", "_")
+                # Apply mask with proper scaling
+                frame = self.hero_effect.apply_face_mask(frame, hero_id, [(x, y, w, h)])
         
         return frame
     

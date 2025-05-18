@@ -63,11 +63,28 @@ def check_requirements():
 
 def main():
     """Main function to run the game."""
-    # Check if assets folder exists, create if not
+    # Create necessary directories
+    heroes = ["iron_man", "spider_man", "thor", "hulk", "captain_america"]
+    
+    # Create base assets directory
     if not os.path.exists("assets"):
         os.makedirs("assets")
-        os.makedirs("assets/heroes", exist_ok=True)
-        print("Created assets folders for storing hero effects")
+    
+    # Create heroes directory
+    heroes_dir = os.path.join("assets", "heroes")
+    if not os.path.exists(heroes_dir):
+        os.makedirs(heroes_dir)
+    
+    # Create individual hero directories
+    for hero in heroes:
+        hero_dir = os.path.join(heroes_dir, hero)
+        if not os.path.exists(hero_dir):
+            os.makedirs(hero_dir)
+            print(f"Created directory for {hero}")
+    
+    print("\nAssets directories are ready!")
+    print("Place your custom mask.png and effect.png files in each hero's directory")
+    print("Default placeholder images will be used if custom assets are not found\n")
     
     # Print intro
     print_intro()
@@ -86,6 +103,8 @@ def main():
         game.run()
     except Exception as e:
         print(f"Error running game: {e}")
+        import traceback
+        traceback.print_exc()
         print("\nPlease make sure all files are in the correct location.")
 
 if __name__ == "__main__":
