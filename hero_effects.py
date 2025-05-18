@@ -89,6 +89,9 @@ class HeroEffect:
             }
         }
         
+        # Load hero masks
+        self.load_hero_masks()
+        
         # For compatibility with the old HeroEffects class in avengers_game.py
         self.hero_assets_compat = {
             "Iron Man": {
@@ -781,4 +784,117 @@ class HeroEffect:
     
     def get_hero_power(self, hero_name):
         """Compatibility method for the old HeroEffects class."""
-        return self.hero_assets_compat.get(hero_name, self.hero_assets_compat["Iron Man"]) 
+        return self.hero_assets_compat.get(hero_name, self.hero_assets_compat["Iron Man"])
+
+    def load_hero_masks(self):
+        """Load hero mask images."""
+        self.hero_masks = {}
+        
+        # Load each hero's mask
+        mask_files = {
+            "iron_man": "assets/heroes/iron_man.png",
+            "spider_man": "assets/heroes/spider_man.jpg",
+            "thor": "assets/heroes/thor.jpg",
+            "hulk": "assets/heroes/hulk.jpg",
+            "captain_america": "assets/heroes/captain_america.png"
+        }
+        
+        for hero_id, mask_path in mask_files.items():
+            try:
+                mask = cv2.imread(mask_path, cv2.IMREAD_UNCHANGED)
+                if mask is not None:
+                    # If image is jpg (no alpha), add alpha channel
+                    if len(mask.shape) == 3 and mask.shape[2] == 3:
+                        alpha = np.ones((mask.shape[0], mask.shape[1], 1), dtype=mask.dtype) * 255
+                        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2BGRA)
+                    self.hero_masks[hero_id] = mask
+            except Exception as e:
+                print(f"Error loading mask for {hero_id}: {e}")
+
+    def apply_hero_mask(self, frame, hero_id, face_x, face_y, face_w, face_h):
+        """Apply hero mask to a face."""
+        if hero_id not in self.hero_masks:
+            return frame
+            
+        mask = self.hero_masks[hero_id]
+        if mask is None:
+            return frame
+            
+        try:
+            # Add some padding around the face for better mask fit
+            pad_w = int(face_w * 0.2)
+            pad_h = int(face_h * 0.2)
+            mask_w = face_w + 2 * pad_w
+            mask_h = face_h + 2 * pad_h
+            
+            # Resize mask while maintaining aspect ratio
+            mask_aspect = mask.shape[1] / mask.shape[0]
+            face_aspect = mask_w / mask_h
+            
+            if mask_aspect > face_aspect:
+                # Mask is wider than face
+                new_w = mask_w
+                new_h = int(new_w / mask_aspect)
+            else:
+                # Mask is taller than face
+                new_h = mask_h
+                new_w = int(new_h * mask_aspect)
+            
+            # Ensure minimum dimensions
+            new_w = max(new_w, 1)
+            new_h = max(new_h, 1)
+            
+            # Resize mask
+            resized_mask = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            
+            # Calculate position to center mask on face
+            x_offset = face_x - pad_w + (mask_w - new_w) // 2
+            y_offset = face_y - pad_h + (mask_h - new_h) // 2
+            
+            # Create a region of interest (ROI) in the frame
+            roi_y1 = max(0, y_offset)
+            roi_y2 = min(frame.shape[0], y_offset + new_h)
+            roi_x1 = max(0, x_offset)
+            roi_x2 = min(frame.shape[1], x_offset + new_w)
+            
+            # Get the region of the mask that will be visible
+            mask_y1 = max(0, -y_offset)
+            mask_y2 = min(resized_mask.shape[0], mask_y1 + (roi_y2 - roi_y1))
+            mask_x1 = max(0, -x_offset)
+            mask_x2 = min(resized_mask.shape[1], mask_x1 + (roi_x2 - roi_x1))
+            
+            # Adjust ROI dimensions to match mask region
+            roi_y2 = roi_y1 + (mask_y2 - mask_y1)
+            roi_x2 = roi_x1 + (mask_x2 - mask_x1)
+            
+            if roi_y2 > roi_y1 and roi_x2 > roi_x1 and mask_y2 > mask_y1 and mask_x2 > mask_x1:
+                roi = frame[roi_y1:roi_y2, roi_x1:roi_x2]
+                mask_roi = resized_mask[mask_y1:mask_y2, mask_x1:mask_x2]
+                
+                # Ensure ROI and mask_roi have the same dimensions
+                if roi.shape[:2] == mask_roi.shape[:2]:
+                    # Convert mask to BGRA if it's BGR
+                    if mask_roi.shape[2] == 3:
+                        mask_roi = cv2.cvtColor(mask_roi, cv2.COLOR_BGR2BGRA)
+                    
+                    # Ensure frame ROI has 3 channels
+                    if len(roi.shape) == 2:
+                        roi = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
+                    
+                    # Create alpha channels
+                    alpha_mask = mask_roi[:, :, 3:4].astype(float) / 255.0
+                    alpha_frame = 1.0 - alpha_mask
+                    
+                    # Blend images
+                    for c in range(3):  # Process each color channel separately
+                        roi[:, :, c] = (alpha_frame[:, :, 0] * roi[:, :, c] + 
+                                      alpha_mask[:, :, 0] * mask_roi[:, :, c]).astype(np.uint8)
+                    
+                    frame[roi_y1:roi_y2, roi_x1:roi_x2] = roi
+            
+        except Exception as e:
+            print(f"Error applying mask: {e}")
+            import traceback
+            traceback.print_exc()
+            
+        return frame 

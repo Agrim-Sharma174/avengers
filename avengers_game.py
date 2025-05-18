@@ -7,44 +7,6 @@ import os
 import random
 from hero_effects import HeroEffect
 
-class HeroEffects:
-    def __init__(self):
-        self.hero_assets = {
-            "Iron Man": {
-                "power_color": (30, 90, 255),  # Red-orange
-                "power_size": 25,
-                "attack_speed": 15,
-                "power_effect": "repulsor",
-            },
-            "Spider-Man": {
-                "power_color": (0, 0, 255),  # Red
-                "power_size": 15,
-                "attack_speed": 20,
-                "power_effect": "web",
-            },
-            "Thor": {
-                "power_color": (255, 215, 0),  # Lightning
-                "power_size": 35,
-                "attack_speed": 12,
-                "power_effect": "lightning",
-            },
-            "Hulk": {
-                "power_color": (0, 200, 0),  # Green
-                "power_size": 40,
-                "attack_speed": 10,
-                "power_effect": "smash",
-            },
-            "Captain America": {
-                "power_color": (255, 0, 0),  # Blue
-                "power_size": 30,
-                "attack_speed": 17,
-                "power_effect": "shield",
-            }
-        }
-        
-    def get_hero_power(self, hero_name):
-        return self.hero_assets.get(hero_name, self.hero_assets["Iron Man"])
-
 class AvengersGame:
     def __init__(self):
         # Initialize camera
@@ -96,12 +58,19 @@ class AvengersGame:
         self.target_spawn_timer = time.time()
         self.target_spawn_interval = 3.0  # Increased from 2.0 to make it easier
         
-        # Enemy types
+        # Enemy types - now with drone designs
         self.enemy_types = [
             {"name": "Drone", "size": 40, "speed": 0.5, "health": 1, "color": (0, 0, 255), "points": 10},
             {"name": "Sentinel", "size": 50, "speed": 0.3, "health": 2, "color": (0, 50, 255), "points": 20},
             {"name": "Ultron Bot", "size": 60, "speed": 0.2, "health": 3, "color": (0, 100, 255), "points": 30}
         ]
+        
+        # Drone images for different enemy types
+        self.drone_images = {
+            "Drone": self.create_drone_image(40, (0, 0, 255)),
+            "Sentinel": self.create_drone_image(50, (0, 50, 255)),
+            "Ultron Bot": self.create_drone_image(60, (0, 100, 255))
+        }
         
         # Special effects
         self.hit_effects = []
@@ -115,7 +84,6 @@ class AvengersGame:
         # Menu state
         self.in_menu = True
         self.hero_select_menu = False
-        self.menu_gesture_start = None  # New for menu activation cooldown
         
         # For aiming
         self.aiming_mode = False
@@ -136,8 +104,79 @@ class AvengersGame:
         self.last_power_time = time.time()  # Initialize last power time
         self.power_cooldown = 0.5  # Reduced from 1.0 seconds to make power usage easier
         
+        # Player circle size (smaller than before)
+        self.player_circle_size = 30  # Reduced size
+        
         # Initialize the first wave
         self.spawn_wave()
+    
+    def create_drone_image(self, size, color):
+        """Create a drone image instead of simple circles"""
+        img = np.zeros((size*2, size*2, 4), dtype=np.uint8)
+        
+        # Base hexagonal body
+        points = []
+        for i in range(6):
+            angle = i * math.pi / 3
+            x = int(size + (size-8) * math.cos(angle))
+            y = int(size + (size-8) * math.sin(angle))
+            points.append([x, y])
+        
+        points = np.array(points, np.int32)
+        points = points.reshape((-1, 1, 2))
+        cv2.fillPoly(img, [points], (*color[:3], 200))  # Semi-transparent body
+        cv2.polylines(img, [points], True, (*color[:3], 255), 2)  # Solid outline
+        
+        # Core center
+        cv2.circle(img, (size, size), size//3, (*color[:3], 255), -1)
+        cv2.circle(img, (size, size), size//3 - 2, (255, 255, 255, 150), 1)
+        
+        # Draw propellers (4 sets)
+        propeller_positions = [
+            (size - size//2, size - size//2),  # Top-left
+            (size + size//2, size - size//2),  # Top-right
+            (size - size//2, size + size//2),  # Bottom-left
+            (size + size//2, size + size//2)   # Bottom-right
+        ]
+        
+        # Draw each propeller with multiple blades
+        for pos in propeller_positions:
+            # Propeller hub
+            cv2.circle(img, pos, size//6, (*color[:3], 255), -1)
+            cv2.circle(img, pos, size//6 - 1, (255, 255, 255, 150), 1)
+            
+            # Propeller blades (3 blades with motion blur effect)
+            for i in range(3):
+                angle = i * 2 * math.pi / 3
+                # Main blade
+                end_x = int(pos[0] + (size//3) * math.cos(angle))
+                end_y = int(pos[1] + (size//3) * math.sin(angle))
+                cv2.line(img, pos, (end_x, end_y), (*color[:3], 200), 2)
+                
+                # Motion blur effect
+                blur_angle1 = angle + 0.2
+                blur_angle2 = angle - 0.2
+                blur_x1 = int(pos[0] + (size//3) * math.cos(blur_angle1))
+                blur_y1 = int(pos[1] + (size//3) * math.sin(blur_angle1))
+                blur_x2 = int(pos[0] + (size//3) * math.cos(blur_angle2))
+                blur_y2 = int(pos[1] + (size//3) * math.sin(blur_angle2))
+                cv2.line(img, pos, (blur_x1, blur_y1), (*color[:3], 100), 1)
+                cv2.line(img, pos, (blur_x2, blur_y2), (*color[:3], 100), 1)
+        
+        # Add tech details
+        # Energy lines
+        for i in range(3):
+            angle = i * 2 * math.pi / 3
+            start_x = int(size + (size//3) * math.cos(angle))
+            start_y = int(size + (size//3) * math.sin(angle))
+            end_x = int(size + (size-10) * math.cos(angle))
+            end_y = int(size + (size-10) * math.sin(angle))
+            cv2.line(img, (start_x, start_y), (end_x, end_y), (255, 255, 255, 150), 1)
+        
+        # Add glow effect around core
+        cv2.circle(img, (size, size), size//2, (*color[:3], 50), -1)
+        
+        return img
     
     def is_pinch_gesture(self, hand_landmarks):
         """Detect pinch gesture (thumb and index finger touching)."""
@@ -364,9 +403,7 @@ class AvengersGame:
         self.aiming_mode = False
         self.collecting_power = False
         
-        if self.detect_menu_gesture(hand_landmarks):
-            self.in_menu = True
-            return
+        # Menu is now handled by key press, so we don't check for menu gesture
             
         if self.is_targeting_gesture(hand_landmarks):
             self.aiming_mode = True
@@ -380,24 +417,8 @@ class AvengersGame:
             self.collect_powers()
     
     def detect_menu_gesture(self, hand_landmarks):
-        # More specific "rock on" gesture (index and pinky up, others down)
-        index_ext = hand_landmarks.landmark[self.mp_hands.HandLandmark.INDEX_FINGER_TIP].y < \
-                   hand_landmarks.landmark[self.mp_hands.HandLandmark.INDEX_FINGER_DIP].y
-        middle_closed = hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_TIP].y > \
-                   hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_PIP].y
-        ring_closed = hand_landmarks.landmark[self.mp_hands.HandLandmark.RING_FINGER_TIP].y > \
-                 hand_landmarks.landmark[self.mp_hands.HandLandmark.RING_FINGER_PIP].y
-        pinky_ext = hand_landmarks.landmark[self.mp_hands.HandLandmark.PINKY_TIP].y < \
-               hand_landmarks.landmark[self.mp_hands.HandLandmark.PINKY_DIP].y
-        
-        # Require 1 second hold for menu activation
-        if index_ext and pinky_ext and middle_closed and ring_closed:
-            if not self.menu_gesture_start:
-                self.menu_gesture_start = time.time()
-            return time.time() - self.menu_gesture_start > 1.0
-        else:
-            self.menu_gesture_start = None
-            return False
+        # The menu is now opened with the 'C' key, not a gesture
+        return False  # Always return False so the gesture doesn't trigger menu
 
     def is_targeting_gesture(self, hand_landmarks):
         # Index finger extended, others closed
@@ -749,11 +770,61 @@ class AvengersGame:
         return frame
     
     def render_targets(self, frame):
-        # Draw each target
+        # Draw each target as a drone instead of a simple circle
         for target in self.targets:
-            # Draw target
-            color = (0, 255, 0) if target['locked'] else target['color']
-            cv2.circle(frame, (int(target['x']), int(target['y'])), target['size'], color, 2)
+            # Get drone image for this enemy type
+            drone_img = self.drone_images.get(target['enemy_type'], self.drone_images["Drone"])
+            
+            # Calculate position for overlay
+            x, y = int(target['x']), int(target['y'])
+            
+            # Highlight if locked
+            if target['locked']:
+                # Draw targeting brackets around drone
+                size = target['size']
+                cv2.line(frame, (x - size, y - size), (x - size//2, y - size), (0, 255, 0), 2)
+                cv2.line(frame, (x - size, y - size), (x - size, y - size//2), (0, 255, 0), 2)
+                cv2.line(frame, (x + size, y - size), (x + size//2, y - size), (0, 255, 0), 2)
+                cv2.line(frame, (x + size, y - size), (x + size, y - size//2), (0, 255, 0), 2)
+                cv2.line(frame, (x - size, y + size), (x - size//2, y + size), (0, 255, 0), 2)
+                cv2.line(frame, (x - size, y + size), (x - size, y + size//2), (0, 255, 0), 2)
+                cv2.line(frame, (x + size, y + size), (x + size//2, y + size), (0, 255, 0), 2)
+                cv2.line(frame, (x + size, y + size), (x + size, y + size//2), (0, 255, 0), 2)
+            
+            # Calculate drone image size for overlay
+            drone_h, drone_w = drone_img.shape[:2]
+            
+            # Overlay drone image
+            alpha_mask = drone_img[:, :, 3] / 255.0
+            alpha_mask = np.expand_dims(alpha_mask, axis=2)
+            alpha_mask = np.repeat(alpha_mask, 3, axis=2)
+            
+            # Calculate placement coordinates
+            x_start = max(0, x - drone_w//2)
+            y_start = max(0, y - drone_h//2)
+            x_end = min(frame.shape[1], x_start + drone_w)
+            y_end = min(frame.shape[0], y_start + drone_h)
+            
+            # Calculate the portion of the drone image to use
+            img_x_start = max(0, drone_w//2 - x if x < drone_w//2 else 0)
+            img_y_start = max(0, drone_h//2 - y if y < drone_h//2 else 0)
+            img_x_end = drone_w - max(0, (x + drone_w//2) - frame.shape[1] if (x + drone_w//2) > frame.shape[1] else 0)
+            img_y_end = drone_h - max(0, (y + drone_h//2) - frame.shape[0] if (y + drone_h//2) > frame.shape[0] else 0)
+            
+            # Ensure we have valid dimensions
+            if x_end > x_start and y_end > y_start and img_x_end > img_x_start and img_y_end > img_y_start:
+                # Get the region of the frame where we'll place the drone
+                roi = frame[y_start:y_end, x_start:x_end]
+                
+                # Get the region of the drone image
+                drone_region = drone_img[img_y_start:img_y_end, img_x_start:img_x_end]
+                alpha_region = alpha_mask[img_y_start:img_y_end, img_x_start:img_x_end]
+                
+                # Make sure dimensions match before blending
+                if roi.shape[:2] == drone_region.shape[:2]:
+                    # Blend drone with frame
+                    blended = (1.0 - alpha_region) * roi + alpha_region * drone_region[:, :, :3]
+                    frame[y_start:y_end, x_start:x_end] = blended
             
             # Draw health bar above target
             health_width = int((target['health'] / 100) * target['size'] * 2)
@@ -763,53 +834,327 @@ class AvengersGame:
             cv2.rectangle(frame, (int(target['x'] - target['size']), int(target['y'] - target['size'] - 10)), 
                          (int(target['x'] - target['size'] + health_width), int(target['y'] - target['size'] - 5)), 
                          (0, 0, 255), -1)
-            
-            # Draw lock indicator if targeted
-            if target['locked']:
-                cv2.line(frame, (int(target['x'] - target['size'] - 10), int(target['y'] - target['size'] - 10)), 
-                        (int(target['x'] - target['size']), int(target['y'] - target['size'])), (0, 255, 0), 2)
-                cv2.line(frame, (int(target['x'] + target['size'] + 10), int(target['y'] - target['size'] - 10)), 
-                        (int(target['x'] + target['size']), int(target['y'] - target['size'])), (0, 255, 0), 2)
-                cv2.line(frame, (int(target['x'] - target['size'] - 10), int(target['y'] + target['size'] + 10)), 
-                        (int(target['x'] - target['size']), int(target['y'] + target['size'])), (0, 255, 0), 2)
-                cv2.line(frame, (int(target['x'] + target['size'] + 10), int(target['y'] + target['size'] + 10)), 
-                        (int(target['x'] + target['size']), int(target['y'] + target['size'])), (0, 255, 0), 2)
         
         return frame
     
     def render_powers(self, frame):
-        # Draw each power
+        # Draw each power with hero-specific visuals
         for power in self.powers:
-            cv2.circle(frame, (int(power['x']), int(power['y'])), power['size'], power['color'], -1)
+            hero = power.get('hero', 'Iron Man')  # Default to Iron Man if not specified
+            hero_effect = power.get('effect', 'repulsor')
             
-            # Draw trail based on effect
-            if power['effect'] == "repulsor":
-                cv2.circle(frame, (int(power['x'] - power['dx']), int(power['y'] - power['dy'])), 
-                          power['size']//2, power['color'], -1)
-            elif power['effect'] == "web":
-                cv2.line(frame, (int(power['x']), int(power['y'])), 
-                        (int(power['x'] - power['dx']*2), int(power['y'] - power['dy']*2)), 
-                        power['color'], 2)
-            elif power['effect'] == "lightning":
+            # Get power position and size
+            x, y = int(power['x']), int(power['y'])
+            size = power['size']
+            color = power['color']
+            
+            # Draw different effects based on hero
+            if hero == "Iron Man":
+                # Iron Man - Repulsor beam with energy rings
+                if power['target'] in self.targets:
+                    target_x, target_y = int(power['target']['x']), int(power['target']['y'])
+                    
+                    # Draw energy beam core
+                    cv2.line(frame, (x, y), (target_x, target_y), (0, 200, 255), 3, cv2.LINE_AA)
+                    
+                    # Add pulsing energy rings along beam
+                    beam_length = math.hypot(target_x - x, target_y - y)
+                    num_rings = int(beam_length / 20)
+                    for i in range(num_rings):
+                        t = i / num_rings
+                        ring_x = int(x + (target_x - x) * t)
+                        ring_y = int(y + (target_y - y) * t)
+                        ring_size = 3 + 2 * math.sin(time.time() * 10 + i)  # Pulsing effect
+                        cv2.circle(frame, (ring_x, ring_y), int(ring_size), (255, 255, 255), 1, cv2.LINE_AA)
+                    
+                    # Add impact explosion
+                    cv2.circle(frame, (target_x, target_y), size, (0, 150, 255), -1)
+                    cv2.circle(frame, (target_x, target_y), size//2, (255, 255, 255), -1)
+                
+                # Draw repulsor glow at hand
                 for i in range(3):
-                    offset_x = random.randint(-10, 10)
-                    offset_y = random.randint(-10, 10)
-                    cv2.line(frame, (int(power['x']), int(power['y'])), 
-                            (int(power['x'] - power['dx'] + offset_x), int(power['y'] - power['dy'] + offset_y)), 
-                            power['color'], 2)
-            elif power['effect'] == "smash":
-                cv2.circle(frame, (int(power['x']), int(power['y'])), 
-                          power['size'] + random.randint(0, 5), power['color'], 2)
-            elif power['effect'] == "shield":
-                cv2.ellipse(frame, (int(power['x']), int(power['y'])), 
-                           (power['size']*2, power['size']), 0, 0, 360, power['color'], 2)
+                    cv2.circle(frame, (x, y), size + i*5, (0, 100 + i*50, 255), 1, cv2.LINE_AA)
+                cv2.circle(frame, (x, y), size//2, (255, 255, 255), -1)
+                
+            elif hero == "Spider-Man":
+                # Spider-Man - Web shooter with detailed web patterns
+                if power['target'] in self.targets:
+                    target_x, target_y = int(power['target']['x']), int(power['target']['y'])
+                    
+                    # Calculate main web strand points
+                    points = []
+                    num_segments = 8
+                    for i in range(num_segments + 1):
+                        t = i / num_segments
+                        # Add slight curve to web
+                        mid_x = (x + target_x) / 2
+                        mid_y = (y + target_y) / 2 - 20 * math.sin(math.pi * t)
+                        if i == 0:
+                            seg_x, seg_y = x, y
+                        elif i == num_segments:
+                            seg_x, seg_y = target_x, target_y
+                        else:
+                            seg_x = x + (mid_x - x) * (2 * t) if t < 0.5 else mid_x + (target_x - mid_x) * (2 * t - 1)
+                            seg_y = y + (mid_y - y) * (2 * t) if t < 0.5 else mid_y + (target_y - mid_y) * (2 * t - 1)
+                        points.append((int(seg_x), int(seg_y)))
+                    
+                    # Draw main web strand
+                    for i in range(len(points) - 1):
+                        cv2.line(frame, points[i], points[i+1], (255, 255, 255), 2, cv2.LINE_AA)
+                    
+                    # Add web details
+                    for i in range(1, len(points) - 1):
+                        # Add crossing strands
+                        angle = math.atan2(points[i+1][1] - points[i-1][1],
+                                         points[i+1][0] - points[i-1][0]) + math.pi/2
+                        length = 10 + 5 * math.sin(i * math.pi / 2)
+                        
+                        x1 = int(points[i][0] + length * math.cos(angle))
+                        y1 = int(points[i][1] + length * math.sin(angle))
+                        x2 = int(points[i][0] - length * math.cos(angle))
+                        y2 = int(points[i][1] - length * math.sin(angle))
+                        
+                        cv2.line(frame, (x1, y1), (x2, y2), (255, 255, 255), 1, cv2.LINE_AA)
+                        
+                        # Add small connecting webs
+                        if i < len(points) - 2:
+                            mid_x = (points[i][0] + points[i+1][0]) // 2
+                            mid_y = (points[i][1] + points[i+1][1]) // 2
+                            cv2.line(frame, (x1, y1), (mid_x, mid_y), (255, 255, 255), 1, cv2.LINE_AA)
+                            cv2.line(frame, (x2, y2), (mid_x, mid_y), (255, 255, 255), 1, cv2.LINE_AA)
+                
+                # Draw web shooter effect at hand
+                cv2.circle(frame, (x, y), size//2, (200, 200, 200), -1)
+                cv2.circle(frame, (x, y), size//4, (255, 255, 255), -1)
+                
+            elif hero == "Thor":
+                # Thor - Lightning with dynamic branching and thunder effects
+                if power['target'] in self.targets:
+                    target_x, target_y = int(power['target']['x']), int(power['target']['y'])
+                    
+                    # Generate main lightning bolt path
+                    points = [(x, y)]
+                    current_x, current_y = x, y
+                    segments = 8
+                    
+                    for i in range(1, segments + 1):
+                        t = i / segments
+                        next_x = int(x + (target_x - x) * t)
+                        next_y = int(y + (target_y - y) * t)
+                        
+                        # Add randomness to path
+                        if i != segments:  # Don't randomize final point
+                            offset = 15 * math.sin(time.time() * 10 + i * math.pi)  # Dynamic movement
+                            next_x += int(offset)
+                            next_y += int(offset * 0.5)
+                        
+                        points.append((next_x, next_y))
+                        current_x, current_y = next_x, next_y
+                    
+                    # Draw main lightning bolt
+                    for i in range(len(points) - 1):
+                        # Outer glow
+                        cv2.line(frame, points[i], points[i+1], (255, 255, 100), 4, cv2.LINE_AA)
+                        # Inner core
+                        cv2.line(frame, points[i], points[i+1], (255, 255, 255), 2, cv2.LINE_AA)
+                    
+                    # Add branching lightning
+                    for i in range(1, len(points) - 1):
+                        if random.random() < 0.7:  # 70% chance for each branch
+                            # Create two branches at each point
+                            for _ in range(2):
+                                branch_length = random.randint(15, 30)
+                                angle = math.atan2(points[i+1][1] - points[i-1][1],
+                                                 points[i+1][0] - points[i-1][0])
+                                angle += random.uniform(-math.pi/3, math.pi/3)
+                                
+                                end_x = int(points[i][0] + branch_length * math.cos(angle))
+                                end_y = int(points[i][1] + branch_length * math.sin(angle))
+                                
+                                # Draw branch with glow effect
+                                cv2.line(frame, points[i], (end_x, end_y), (255, 255, 100), 3, cv2.LINE_AA)
+                                cv2.line(frame, points[i], (end_x, end_y), (255, 255, 255), 1, cv2.LINE_AA)
+                    
+                    # Add impact effect at target
+                    impact_size = size * 2
+                    for i in range(3):
+                        cv2.circle(frame, (target_x, target_y), impact_size - i*5,
+                                 (255, 255, 100), 2, cv2.LINE_AA)
+                
+                # Draw Mjolnir at hand
+                hammer_size = size
+                # Handle
+                cv2.rectangle(frame, (x - hammer_size//6, y - hammer_size),
+                            (x + hammer_size//6, y - hammer_size//2),
+                            (150, 150, 150), -1)
+                # Head
+                cv2.rectangle(frame, (x - hammer_size//2, y - hammer_size//2),
+                            (x + hammer_size//2, y), (200, 200, 200), -1)
+                # Details
+                cv2.rectangle(frame, (x - hammer_size//3, y - hammer_size//2),
+                            (x + hammer_size//3, y), (150, 150, 150), 2)
+                
+            elif hero == "Hulk":
+                # Hulk - Smash with shockwave and debris
+                if power['target'] in self.targets:
+                    target_x, target_y = int(power['target']['x']), int(power['target']['y'])
+                    
+                    # Draw smash path with growing effect
+                    dist = math.hypot(target_x - x, target_y - y)
+                    num_segments = int(dist / 10)
+                    
+                    for i in range(num_segments):
+                        t = i / num_segments
+                        # Create growing effect along path
+                        current_x = int(x + (target_x - x) * t)
+                        current_y = int(y + (target_y - y) * t)
+                        current_size = int(size * (0.5 + t * 0.5))  # Grows as it moves
+                        
+                        # Draw fist silhouette with motion blur
+                        alpha = 0.3 * (1 - t)  # Fade out trail
+                        overlay = frame.copy()
+                        cv2.circle(overlay, (current_x, current_y), current_size,
+                                 (0, 200, 0), -1)
+                        cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+                    
+                    # Draw impact effect at target
+                    # Shockwave rings
+                    for i in range(3):
+                        radius = int(size * (2 + i) * (1 + math.sin(time.time() * 5)))
+                        cv2.circle(frame, (target_x, target_y), radius,
+                                 (0, 255, 0), 2, cv2.LINE_AA)
+                    
+                    # Ground cracks
+                    for i in range(8):
+                        angle = i * math.pi / 4 + random.uniform(-0.2, 0.2)
+                        length = size * 3
+                        end_x = int(target_x + length * math.cos(angle))
+                        end_y = int(target_y + length * math.sin(angle))
+                        
+                        # Draw crack with varying thickness
+                        pts = []
+                        for t in range(10):
+                            t_val = t / 9
+                            crack_x = int(target_x + length * t_val * math.cos(angle))
+                            crack_y = int(target_y + length * t_val * math.sin(angle))
+                            offset = random.randint(-5, 5)
+                            pts.append([crack_x + offset, crack_y + offset])
+                        
+                        pts = np.array(pts, np.int32)
+                        cv2.polylines(frame, [pts], False, (0, 255, 0), 2, cv2.LINE_AA)
+                    
+                    # Add debris particles
+                    for _ in range(10):
+                        angle = random.uniform(0, 2 * math.pi)
+                        speed = random.uniform(0.5, 1.0)
+                        particle_x = int(target_x + size * 2 * speed * math.cos(angle))
+                        particle_y = int(target_y + size * 2 * speed * math.sin(angle))
+                        particle_size = random.randint(2, 6)
+                        cv2.circle(frame, (particle_x, particle_y), particle_size,
+                                 (0, 200, 0), -1)
+                
+                # Draw fist at hand
+                cv2.circle(frame, (x, y), size, (0, 200, 0), -1)
+                # Knuckle details
+                for i in range(4):
+                    offset_x = size//3 * math.cos(i * math.pi/6)
+                    cv2.circle(frame, (int(x + offset_x), int(y - size//3)),
+                             size//6, (0, 150, 0), -1)
+                
+            elif hero == "Captain America":
+                # Captain America - Shield with star and dynamic spinning
+                if power['target'] in self.targets:
+                    target_x, target_y = int(power['target']['x']), int(power['target']['y'])
+                    
+                    # Calculate shield spin based on time
+                    spin_angle = (time.time() * 720) % 360  # Two rotations per second
+                    
+                    # Draw shield trail
+                    dist = math.hypot(target_x - x, target_y - y)
+                    num_trails = int(dist / 20)
+                    
+                    for i in range(num_trails):
+                        t = i / num_trails
+                        trail_x = int(x + (target_x - x) * t)
+                        trail_y = int(y + (target_y - y) * t)
+                        trail_size = size * (1 - t * 0.3)  # Shield gets slightly smaller along trail
+                        trail_angle = spin_angle - t * 360  # Spin along the trail
+                        
+                        # Draw simplified shield for trail
+                        alpha = 0.3 * (1 - t)
+                        overlay = frame.copy()
+                        
+                        # Rotate and draw shield
+                        M = cv2.getRotationMatrix2D((trail_x, trail_y), trail_angle, 1)
+                        
+                        # Draw basic shield shape for trail
+                        cv2.circle(overlay, (trail_x, trail_y), int(trail_size),
+                                 (0, 0, 150), -1)
+                        cv2.circle(overlay, (trail_x, trail_y), int(trail_size * 0.8),
+                                 (200, 0, 0), -1)
+                        cv2.circle(overlay, (trail_x, trail_y), int(trail_size * 0.6),
+                                 (255, 255, 255), -1)
+                        
+                        cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+                    
+                    # Draw impact effect at target
+                    cv2.circle(frame, (target_x, target_y), size * 2, (0, 0, 150), 2)
+                    for i in range(8):
+                        angle = i * math.pi / 4
+                        end_x = int(target_x + size * 2 * math.cos(angle))
+                        end_y = int(target_y + size * 2 * math.sin(angle))
+                        cv2.line(frame, (target_x, target_y), (end_x, end_y),
+                                (200, 0, 0), 2, cv2.LINE_AA)
+                
+                # Draw detailed shield at hand
+                # Base circles
+                cv2.circle(frame, (x, y), size, (0, 0, 150), -1)  # Outer blue
+                cv2.circle(frame, (x, y), int(size * 0.8), (200, 0, 0), -1)  # Red
+                cv2.circle(frame, (x, y), int(size * 0.6), (255, 255, 255), -1)  # White
+                cv2.circle(frame, (x, y), int(size * 0.4), (200, 0, 0), -1)  # Red
+                cv2.circle(frame, (x, y), int(size * 0.2), (0, 0, 150), -1)  # Blue center
+                
+                # Draw star
+                star_size = size * 0.3
+                star_points = []
+                for i in range(5):
+                    # Outer points
+                    angle = math.pi/2 + i * 2*math.pi/5
+                    px = x + star_size * math.cos(angle)
+                    py = y + star_size * math.sin(angle)
+                    star_points.append((int(px), int(py)))
+                    
+                    # Inner points
+                    angle += math.pi/5
+                    px = x + star_size * 0.4 * math.cos(angle)
+                    py = y + star_size * 0.4 * math.sin(angle)
+                    star_points.append((int(px), int(py)))
+                
+                # Draw star
+                star_points = np.array(star_points, np.int32)
+                star_points = star_points.reshape((-1, 1, 2))
+                cv2.fillPoly(frame, [star_points], (255, 255, 255))
+            
+            else:
+                # Default power effect
+                cv2.circle(frame, (x, y), size, color, -1)
         
         return frame
     
     def render_danger_zone(self, frame, faces):
         if len(faces) > 0 and self.face_position:
+            # Draw smaller circle around face (player area)
+            cv2.circle(frame, self.face_position, self.player_circle_size, (0, 255, 0), 2)
+            
             # Draw danger zone around face
-            cv2.circle(frame, self.face_position, self.danger_zone_radius, (0, 0, 255), 2)
+            cv2.circle(frame, self.face_position, self.danger_zone_radius, (0, 0, 255), 1, cv2.LINE_AA)
+            
+            # Apply hero mask to face
+            for (x, y, w, h) in faces:
+                # Convert hero name to hero_id format
+                hero_id = self.current_hero.lower().replace(" ", "_")
+                # Apply mask
+                frame = self.hero_effect.apply_hero_mask(frame, hero_id, x, y, w, h)
         
         return frame
     
@@ -897,6 +1242,8 @@ class AvengersGame:
             if key == ord('q'):
                 break
             elif key == ord('m'):
+                self.in_menu = True
+            elif key == ord('c'):  # 'C' key now opens hero selection menu
                 self.in_menu = True
         
         self.cleanup()
