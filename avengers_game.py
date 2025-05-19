@@ -20,8 +20,8 @@ class AvengersGame:
         self.mp_drawing = mp.solutions.drawing_utils
         self.hands = self.mp_hands.Hands(
             max_num_hands=1,
-            min_detection_confidence=0.6,  # Reduced from 0.7 for easier detection
-            min_tracking_confidence=0.6    # Reduced from 0.7 for easier tracking
+            min_detection_confidence=0.6,
+            min_tracking_confidence=0.6
         )
         self.face_detection = self.mp_face.FaceDetection(min_detection_confidence=0.5)
         
@@ -54,11 +54,11 @@ class AvengersGame:
         self.score = 0
         self.level = 1
         self.targets = []
-        self.max_targets = 3  # Reduced from 5
+        self.max_targets = 3
         self.target_spawn_timer = time.time()
-        self.target_spawn_interval = 3.0  # Increased from 2.0 to make it easier
+        self.target_spawn_interval = 3.0
         
-        # Enemy types - now with drone designs
+        # Enemy types
         self.enemy_types = [
             {"name": "Drone", "size": 40, "speed": 0.5, "health": 1, "color": (0, 0, 255), "points": 10},
             {"name": "Sentinel", "size": 50, "speed": 0.3, "health": 2, "color": (0, 50, 255), "points": 20},
@@ -90,22 +90,21 @@ class AvengersGame:
         self.aim_target = None
         self.aim_start_pos = None
         
-        # Add these new variables
         self.current_target = None
-        self.target_lock_distance = 150  # Increased from 100 for easier targeting
+        self.target_lock_distance = 150
         self.wave_number = 1
-        self.enemies_per_wave = 3  # Reduced from 5
+        self.enemies_per_wave = 3
         self.enemies_remaining = 0
         self.game_over = False
         self.player_health = 100
         self.danger_zone_radius = 150  # Area around face considered dangerous
-        self.max_powers = 5  # Increased from 3 to give player more powers
+        self.max_powers = 5
         self.face_position = None
         self.last_power_time = time.time()  # Initialize last power time
-        self.power_cooldown = 0.5  # Reduced from 1.0 seconds to make power usage easier
+        self.power_cooldown = 0.5
         
-        # Player circle size (smaller than before)
-        self.player_circle_size = 30  # Reduced size
+        # Player circle size
+        self.player_circle_size = 30
         
         # Initialize the first wave
         self.spawn_wave()

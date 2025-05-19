@@ -1,100 +1,102 @@
-# Marvel Avengers Gesture-Based Game
+# Marvel Avengers Gesture Control Game
 
-A fun, interactive game that lets you become your favorite Marvel hero using computer vision and gesture controls. This version features easier gameplay for beginners, drone enemies, and spectacular hero-specific visual effects!
-
-![Avengers Logo](https://i.imgur.com/YbqKVo4.png)
-
-## Overview
-
-The Avengers Game uses your webcam and hand gestures to let you control Marvel superheroes and defeat enemy drones. With enhanced visual effects and simplified gameplay, it's accessible for players of all skill levels.
+An interactive game that lets you become your favorite Marvel Avenger using computer vision and hand gestures. Fight against evil drones using hero-specific powers and stunning visual effects!
 
 ## Features
 
-- **5 Playable Heroes**: Iron Man, Spider-Man, Thor, Hulk, and Captain America
-- **Hero-Specific Powers**: Each hero has unique attack animations and visual effects:
-  - Iron Man: Repulsor beam with blue energy glow
-  - Spider-Man: White web shooters with detailed strand effects
-  - Thor: Lightning bolts with branches and glow effects
-  - Hulk: Green fist with impact shockwaves
-  - Captain America: Shield with star and motion trail
-- **Enemy Drones**: Visually detailed drone enemies instead of simple circles
-- **Gesture Controls**: Use intuitive hand gestures to target enemies and unleash superhero powers
-- **Dynamic Difficulty**: Enemies spawn in waves with slight increases in difficulty
-- **Spectacular Kill Effects**: Satisfy your inner hero with amazing visual effects when defeating enemies
-- **Easy Mode**: Reduced enemy numbers and speed for a more accessible experience
+- **5 Playable Heroes**:
+  - Iron Man: Repulsor beam with energy rings
+  - Spider-Man: Web shooter with detailed web patterns
+  - Thor: Lightning bolts with dynamic branching
+  - Hulk: Powerful smash with shockwaves
+  - Captain America: Shield throw with bounce effects
+
+- **Gesture Controls**:
+  - Point with index finger to target enemies
+  - Make a fist to collect power (up to 5 charges)
+  - Open palm to unleash your hero's power
+  - Press 'C' to open hero selection menu
+  - Press 'M' to return to menu
+  - Press 'Q' to quit game
+
+- **Game Elements**:
+  - Dynamic enemy drones with unique behaviors
+  - Wave-based progression system
+  - Health and power management
+  - Score tracking
+  - Hero-specific kill animations
+  - Face detection for hero mask overlay
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.7 or higher
 - Webcam
-- Libraries:
-  - OpenCV
-  - Mediapipe
-  - NumPy
+- Required Python packages (install via pip):
+  ```
+  pip install -r requirements.txt
+  ```
 
 ## Installation
 
-1. Clone this repository:
-
-```
-git clone https://github.com/yourusername/avengers-game.git
-cd avengers-game
-```
-
-2. Install required packages:
-
-```
-pip install opencv-python mediapipe numpy
-```
-
+1. Clone or download this repository
+2. Install the required packages:
+   ```
+   pip install -r requirements.txt
+   ```
 3. Run the game:
+   ```
+   python run_avengers.py
+   ```
 
-```
-python run_avengers.py
-```
+## Game Structure
 
-## Gameplay Controls
+- `run_avengers.py`: Main entry point and game launcher
+- `avengers_game.py`: Core game logic and mechanics
+- `hero_effects.py`: Hero-specific visual effects and powers
+- `assets/`: Directory containing hero masks and effect images
 
-| Control | Action |
-|---------|--------|
-| Point with index finger | Target enemies |
-| Make a fist | Collect power (up to 5 charges) |
-| Open palm | Use power to attack targeted enemy |
-| Press 'C' key | Open hero selection menu |
-| Press 'q' | Quit game |
-| Press 'm' | Return to menu |
+## Gameplay Tips
+
+- Keep distance from enemies to prevent health loss
+- Collect powers when not in immediate danger
+- Use hero powers strategically - each hero has unique strengths
+- Watch your health bar and avoid getting surrounded
+- Target enemies that are closest to you first
 
 ## Hero Powers
 
-Each hero has a unique power with different visual effects:
+Each hero has unique abilities and effects:
 
-- **Iron Man**: Repulsor Beam - A bright blue energy beam with glowing rings
-- **Spider-Man**: Web Shooter - White webs with detailed strand patterns
-- **Thor**: Lightning - Jagged lightning bolts with multiple branches and glow effects
-- **Hulk**: Smash - Green fist with motion blur and impact shockwaves
-- **Captain America**: Shield - Animated shield with star and motion trail
-
-## Game Objective
-
-Protect yourself from incoming drone enemies by defeating them before they reach you. Each wave will spawn a small number of enemies that move toward your position. Target them with your index finger and unleash your hero's power to defeat them!
+- **Iron Man**: Repulsor beam with energy rings and pulsing effects
+- **Spider-Man**: Web shooter with detailed strand patterns and connecting webs
+- **Thor**: Lightning strikes with dynamic branching and thunder effects
+- **Hulk**: Ground-shaking smash with shockwaves and debris
+- **Captain America**: Shield throw with star effects and motion trails
 
 ## Customization
 
-The game can be further customized by editing these files:
-- `avengers_game.py`: Main game logic
-- `hero_effects.py`: Visual effects for each hero
-- `run_avengers.py`: Game launcher and intro display
+The game can be customized in various ways:
+- Add custom hero masks in `assets/heroes/<hero_name>/mask.png`
+- Add custom effect images in `assets/heroes/<hero_name>/effect.png`
+- Modify hero powers and effects in `hero_effects.py`
+- Adjust game difficulty settings in `avengers_game.py`
+
+See `CUSTOMIZATION.md` for detailed customization instructions.
 
 ## Credits
 
-- Developed using OpenCV and MediaPipe
+- Developed using OpenCV and MediaPipe for computer vision
 - Inspired by Marvel's Avengers characters
 - Created for educational and entertainment purposes
 
 ## License
 
-This project is for educational purposes only. All Marvel characters are property of Marvel Entertainment and Disney.
+This project is for educational purposes only. All Marvel characters and related elements are property of Marvel Entertainment and Disney.
 
----
+## Support
 
-Enjoy the game! If you have suggestions or issues, please submit them on GitHub! 
+If you encounter any issues or have suggestions:
+1. Check the known issues in the documentation
+2. Ensure your webcam is working properly
+3. Verify you have all required dependencies installed
+4. Make sure you have sufficient lighting for gesture detection 

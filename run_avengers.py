@@ -15,7 +15,7 @@ def print_intro():
                                                               __/ |         
                                                              |___/          
     """)
-    print("\n🌟 MARVEL AVENGERS EXPERIENCE - EASY MODE 🌟")
+    print("\n🌟 MARVEL AVENGERS EXPERIENCE 🌟")
     print("=========================================")
     print("Join your favorite heroes to fight against evil targets in this beginner-friendly version!")
     print("\n✨ FEATURES:")

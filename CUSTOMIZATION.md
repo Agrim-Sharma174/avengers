@@ -1,165 +1,192 @@
-# Customization Guide for Throw Fire
+# Customization Guide for Marvel Avengers Game
 
-This guide explains how to customize and extend the "Throw Fire" application.
+This guide explains how to customize and extend the Marvel Avengers game.
 
-## Fire Appearance
+## Hero Assets
 
-### Changing Fire Colors
+### Custom Hero Masks
 
-In both versions of the application, you can modify the fire colors by editing the `create_fire_image` function.
+Each hero can have a custom mask image that appears over the player's face:
 
-Look for this section in the code:
+1. Create a PNG image with transparency (recommended size: 200x200 pixels)
+2. Save it as `mask.png` in the hero's directory:
+   ```
+   assets/heroes/iron_man/mask.png
+   assets/heroes/spider_man/mask.png
+   assets/heroes/thor/mask.png
+   assets/heroes/hulk/mask.png
+   assets/heroes/captain_america/mask.png
+   ```
 
-```python
-# Base (orange)
-cv2.ellipse(img, (width//2, int(height*0.65)), (int(width*0.3), int(height*0.4)), 
-           0, 0, 360, (0, 69, 255, 255), -1)
+### Custom Power Effects
 
-# Middle (red)
-cv2.ellipse(img, (width//2, int(height*0.5)), (int(width*0.2), int(height*0.35)), 
-           0, 0, 360, (0, 0, 255, 255), -1)
+Each hero can have custom power effect images:
 
-# Top (yellow)
-cv2.ellipse(img, (width//2, int(height*0.4)), (int(width*0.1), int(height*0.25)), 
-           0, 0, 360, (0, 165, 255, 255), -1)
-```
+1. Create a PNG image with transparency (recommended size: 100x100 pixels)
+2. Save it as `effect.png` in the hero's directory:
+   ```
+   assets/heroes/iron_man/effect.png
+   assets/heroes/spider_man/effect.png
+   assets/heroes/thor/effect.png
+   assets/heroes/hulk/effect.png
+   assets/heroes/captain_america/effect.png
+   ```
 
-The color values are in BGRA format (Blue, Green, Red, Alpha). For example, to make a blue fire, change:
-- For the base: `(0, 69, 255, 255)` to `(255, 69, 0, 255)`
-- For the middle: `(0, 0, 255, 255)` to `(255, 0, 0, 255)`
-- For the top: `(0, 165, 255, 255)` to `(255, 165, 0, 255)`
+## Game Modifications
 
-### Using Custom Fire Images
+### Adjusting Hero Powers
 
-Instead of generating the fire programmatically, you can use custom images:
-
-1. Create a PNG image with transparency (for the flame)
-2. Place it in the `assets` directory
-3. In `throw_fire.py` or `simple_fire.py`, modify the initialization code:
-
-```python
-# Instead of generating fire image
-self.fire_img = cv2.imread("assets/your_custom_fire.png", cv2.IMREAD_UNCHANGED)
-if self.fire_img is None:
-    # Fallback to generated fire
-    self.fire_img = self.create_fire_image(100, 100)
-self.small_fire_img = cv2.resize(self.fire_img, (50, 50))
-```
-
-## Animation Parameters
-
-### Fire Size and Speed
-
-To adjust fire size:
-- Change the resize values: `cv2.resize(self.fire_img, (50, 50))` to a different size
-- Modify the scale parameters in the animation code
-
-To adjust fire throwing speed:
-- Change `self.throw_duration = 1.5  # seconds` to a higher or lower value
-
-### Adding More Fire Particles
-
-To increase the number of particles when throwing fire:
-```python
-self.thrown_fires = self.create_fire_particle_system(
-    hand_x, hand_y, num_particles=30, spread=300, intensity=1.5)
-```
-
-Increase `num_particles` for more particles, and adjust `spread` to control how far they travel.
-
-## Gesture Recognition
-
-### Adjusting Pinch Sensitivity
-
-In the full version (`throw_fire.py`), you can modify the pinch detection threshold:
+In `hero_effects.py`, you can modify each hero's power attributes:
 
 ```python
-# If distance is small enough, consider it a pinch
-return distance < 30, (thumb_x + index_x) // 2, (thumb_y + index_y) // 2
+self.hero_assets = {
+    "iron_man": {
+        "power_type": "beam",
+        "power_speed": 2.0,
+        "power_damage": 3,
+        "power_color": (0, 200, 255)
+    },
+    # ... other heroes ...
+}
 ```
 
-Change `distance < 30` to a higher value for easier pinch detection, or lower for more precise detection.
+Parameters you can adjust:
+- `power_type`: Effect type ("beam", "web", "lightning", "smash", "shield")
+- `power_speed`: Projectile speed (higher = faster)
+- `power_damage`: Damage dealt to enemies
+- `power_color`: RGB color tuple for power effects
 
-### Adding New Gestures
+### Modifying Game Difficulty
 
-To add a new gesture:
-
-1. Create a new detection function, following the pattern of the existing ones:
-```python
-def is_new_gesture(self, hand_landmarks):
-    # Detection logic here
-    return is_detected
-```
-
-2. Add the gesture detection to the main loop and implement the action
-
-## Advanced Customizations
-
-### Adding Sound Effects
-
-To add sound effects, install the `pygame` library:
+In `avengers_game.py`, you can adjust these game parameters:
 
 ```python
-import pygame
+# Enemy settings
+self.max_targets = 3          # Maximum enemies at once
+self.target_spawn_interval = 3.0  # Seconds between spawns
+self.enemies_per_wave = 3     # Enemies per wave
+self.danger_zone_radius = 150 # Safe distance from enemies
 
-# Initialize pygame mixer
-pygame.mixer.init()
-
-# Load sounds
-fire_sound = pygame.mixer.Sound("assets/fire_sound.wav")
-throw_sound = pygame.mixer.Sound("assets/throw_sound.wav")
-
-# Then play the sounds at appropriate moments
-fire_sound.play()
+# Player settings
+self.max_powers = 5           # Maximum stored powers
+self.power_cooldown = 0.5     # Seconds between power uses
+self.player_health = 100      # Starting health
 ```
 
-### Creating Particle Effects
+### Enemy Types
 
-You can enhance the fire effects by adding more varied particles:
+Customize enemy drones in `avengers_game.py`:
 
-1. Add a particle class to manage individual particles
-2. Add properties like lifetime, color variation, opacity
-3. Update particles in each frame
-
-Example particle implementation:
 ```python
-class FireParticle:
-    def __init__(self, x, y, velocity_x, velocity_y, size, lifetime):
-        self.x = x
-        self.y = y
-        self.velocity_x = velocity_x
-        self.velocity_y = velocity_y
-        self.size = size
-        self.lifetime = lifetime
-        self.age = 0
-        
-    def update(self):
-        self.x += self.velocity_x
-        self.y += self.velocity_y
-        self.age += 1
-        # Add gravity effect
-        self.velocity_y += 0.1
-        
-    def is_alive(self):
-        return self.age < self.lifetime
+self.enemy_types = [
+    {
+        "name": "Drone",
+        "size": 40,
+        "speed": 0.5,
+        "health": 1,
+        "color": (0, 0, 255),
+        "points": 10
+    },
+    # ... add more enemy types ...
+]
 ```
 
-### Adding Color Modes
+## Visual Effects
 
-You can implement different color themes for the fire:
-1. Create several fire generation functions for different colors
-2. Add a keyboard shortcut to switch between them
+### Modifying Hero Effects
 
-Example:
+Each hero's power effect can be customized in `hero_effects.py`:
+
+#### Iron Man
 ```python
-if key == ord('b'):  # Press 'b' for blue fire
-    self.fire_mode = "blue"
-elif key == ord('g'):  # Press 'g' for green fire
-    self.fire_mode = "green"
+# Repulsor beam
+cv2.line(frame, (x, y), (target_x, target_y), (0, 200, 255), 3)
+cv2.circle(frame, (x, y), size, (255, 255, 255), -1)
 ```
 
-## Troubleshooting Customizations
+#### Spider-Man
+```python
+# Web pattern
+cv2.line(frame, points[i], points[i+1], (255, 255, 255), 2)
+cv2.circle(frame, (x, y), size//2, (200, 200, 200), -1)
+```
 
-- If your custom image doesn't display properly, check that it has a proper alpha channel
-- If animations are too slow, reduce particle count or simplify effects
-- If gesture detection becomes unreliable after modifications, revert to the original detection parameters 
+#### Thor
+```python
+# Lightning effect
+cv2.line(frame, points[i], points[i+1], (255, 255, 100), 4)
+cv2.circle(frame, (target_x, target_y), impact_size, (255, 255, 100), 2)
+```
+
+#### Hulk
+```python
+# Smash effect
+cv2.circle(frame, (target_x, target_y), radius, (0, 255, 0), 2)
+cv2.polylines(frame, [pts], False, (0, 255, 0), 2)
+```
+
+#### Captain America
+```python
+# Shield effect
+cv2.circle(frame, (x, y), size, (0, 0, 150), -1)
+cv2.circle(frame, (x, y), int(size * 0.8), (200, 0, 0), -1)
+```
+
+## UI Customization
+
+### Game Interface
+
+Modify the UI elements in `avengers_game.py`:
+
+```python
+def render_ui(self, frame):
+    # Score display
+    cv2.putText(frame, f"Score: {self.score}", 
+                (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, 
+                (255, 255, 255), 2)
+    
+    # Health bar
+    cv2.rectangle(frame, (self.width - 220, 30), 
+                 (self.width - 220 + health_width, 50), 
+                 (0, 0, 255), -1)
+```
+
+### Menu Customization
+
+Modify the hero selection menu in `avengers_game.py`:
+
+```python
+def show_menu(self, frame, hand_landmarks=None):
+    # Menu title
+    cv2.putText(frame, "AVENGERS HERO SELECTION", 
+                (self.width//2 - 250, 100),
+                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+```
+
+## Advanced Customization
+
+### Adding New Heroes
+
+1. Add hero assets to the `assets/heroes/` directory
+2. Add hero configuration to `hero_assets` in `hero_effects.py`
+3. Create custom power effects in `create_targeted_effect()`
+4. Add hero to the selection menu in `show_menu()`
+
+### Adding New Enemy Types
+
+1. Create new enemy design in `create_drone_image()`
+2. Add enemy type to `enemy_types` list
+3. Customize enemy behavior in `update_targets()`
+
+### Creating Custom Effects
+
+1. Implement effect generation in `hero_effects.py`
+2. Add effect rendering in `render_powers()`
+3. Trigger effects in appropriate game events
+
+## Troubleshooting
+
+- If custom images don't load, check file paths and image formats
+- For performance issues, reduce effect complexity or number of particles
+- If gestures aren't detecting well, adjust detection thresholds
+- For memory issues, optimize image sizes and effect durations 
